@@ -1,70 +1,65 @@
 import accounts.*;
 import person.AccountOwner;
+import transfer.AccountTransferService;
 import transfer.DepositTransferService;
 import transfer.WithdrawTransferService;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        AccountOwner accountOwner = new AccountOwner("Tomas", "Pesek");
-        accountOwner.setLastName("Pokorny");
+        AccountOwner owner1 = new AccountOwner("Jakub", "Mazal");
+        AccountOwner owner2 = new AccountOwner("Jan", "Novak");
 
-        BankAccount bankAccount = new CurrentAccount(accountOwner, "123", 500);
-        BankAccount studentAccount = new StudentAccount(accountOwner, "123", 500, "Delta");
-        BankAccount savingAccount = new SavingAccount(accountOwner, "123");
+        BankAccount currentAccount = new CurrentAccount(owner1, "1001", 1000);
+        BankAccount businessAccount = new BusinessAccount(owner1, "1002");
+        businessAccount.setBalance(10000);
+        BankAccount studentAccount = new StudentAccount(owner2, "2001", 500, "Delta");
 
+        System.out.println("=== POČÁTEČNÍ ZŮSTATKY ===");
+        printBalance("CurrentAccount", currentAccount);
+        printBalance("BusinessAccount", businessAccount);
+        printBalance("StudentAccount", studentAccount);
 
-        List<BankAccount> bankAccounts = new ArrayList<>();
-        bankAccounts.add(bankAccount);
-        bankAccounts.add(studentAccount);
+        AccountTransferService transferService = new AccountTransferService();
 
+        System.out.println("\n--- 1. Převod 1000 Kč z BusinessAccount na CurrentAccount ---");
+        // Poplatek 0.3 % z 1000 je 3 Kč -> z BusinessAccount odejde 1003 Kč
+        transferService.transfer(businessAccount, currentAccount, 1000);
+        printBalance("BusinessAccount (po odečtení 1000 + 3 Kč poplatek)", businessAccount);
+        printBalance("CurrentAccount (po přijetí 1000 Kč)", currentAccount);
 
-        for (BankAccount account: bankAccounts){
-            if (account instanceof InterestPoint) {
-                ((InterestPoint)account).calculateInterest();
-            }
+        System.out.println("\n--- 2. Převod 500 Kč z CurrentAccount na StudentAccount ---");
+        // StudentAccount dostane navíc bonus 0.5 % z 500 (2.5 Kč)
+        transferService.transfer(currentAccount, studentAccount, 500);
+        printBalance("CurrentAccount", currentAccount);
+        printBalance("StudentAccount (přijato 500 + 2.5 bonus)", studentAccount);
+
+        System.out.println("\n--- 3. Test ošetření chyb / výjimek ---");
+
+        try {
+            System.out.println("Pokus o převod záporné částky:");
+            transferService.transfer(currentAccount, studentAccount, -200);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Chyba zachycena: " + e.getMessage());
         }
 
-        for (BankAccount account: bankAccounts){
-
-            if (account instanceof StudentAccount) {
-                StudentAccount stdAccount = (StudentAccount) account;
-                System.out.println("school: " + stdAccount.getSchoolName());
-            }
-
-            System.out.println("balance: " + account.getBalance());
-
+        try {
+            System.out.println("Pokus o převod na stejný účet:");
+            transferService.transfer(currentAccount, currentAccount, 100);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Chyba zachycena: " + e.getMessage());
         }
 
-
-        printBalance(bankAccount);
-
-        DepositTransferService depositTransferService = new DepositTransferService();
-        depositTransferService.deposit(bankAccount, 400);
-        depositTransferService.deposit(bankAccount, 100);
-        depositTransferService.deposit(bankAccount, 200);
-        depositTransferService.deposit(bankAccount, 600);
-
-        printBalance(bankAccount);
-
-        WithdrawTransferService withdrawTransferService = new WithdrawTransferService();
-
-        withdrawTransferService.withdraw(bankAccount, 300);
-        withdrawTransferService.withdraw(bankAccount, 300);
-
-        withdrawTransferService.withdraw(bankAccount, 100);
-        withdrawTransferService.withdraw(bankAccount, 50);
-        withdrawTransferService.withdraw(bankAccount, 400);
-
-        printBalance(bankAccount);
-
+        try {
+            System.out.println("Pokus o převod více peněz, než je zůstatek:");
+            transferService.transfer(currentAccount, businessAccount, 50000);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Chyba zachycena: " + e.getMessage());
+        }
     }
 
-    private static void printBalance(BankAccount bankAccount) {
-        System.out.println("balance: " + bankAccount.getBalance());
+    private static void printBalance(String label, BankAccount bankAccount) {
+        System.out.println(label + " balance: " + bankAccount.getBalance());
     }
 }

@@ -1,63 +1,70 @@
-
-import accounts.BankAccount;
-import accounts.BusinessAccount;
-import accounts.CurrentAccount;
-import accounts.StudentAccount;
+import accounts.*;
 import person.AccountOwner;
+import transfer.DepositTransferService;
+import transfer.WithdrawTransferService;
 
-void main() {
+import java.util.ArrayList;
+import java.util.List;
 
-    AccountOwner accountOwner = new AccountOwner("Jakub", "Mazal");
-    accountOwner.setLastName("Sigmal");
+public class Main {
 
-    BankAccount bankAccount = new CurrentAccount(accountOwner, "123", 0);
-    BankAccount studentAccount = new StudentAccount(accountOwner, "456", 0, "Delta");
-    BankAccount businessAccount = new BusinessAccount(accountOwner, "789", 0);
+    public static void main(String[] args) {
 
-    List<BankAccount> bankAccounts = new ArrayList<>();
-    bankAccounts.add(bankAccount);
-    bankAccounts.add(studentAccount);
+        AccountOwner accountOwner = new AccountOwner("Tomas", "Pesek");
+        accountOwner.setLastName("Pokorny");
 
-    for (BankAccount account: bankAccounts){
+        BankAccount bankAccount = new CurrentAccount(accountOwner, "123", 500);
+        BankAccount studentAccount = new StudentAccount(accountOwner, "123", 500, "Delta");
+        BankAccount savingAccount = new SavingAccount(accountOwner, "123");
 
-        if (account instanceof StudentAccount){
-            StudentAccount stdAccount = (StudentAccount) account;
-            printBalance(account);
+
+        List<BankAccount> bankAccounts = new ArrayList<>();
+        bankAccounts.add(bankAccount);
+        bankAccounts.add(studentAccount);
+
+
+        for (BankAccount account: bankAccounts){
+            if (account instanceof InterestPoint) {
+                ((InterestPoint)account).calculateInterest();
+            }
         }
 
-        printBalance(account);
+        for (BankAccount account: bankAccounts){
+
+            if (account instanceof StudentAccount) {
+                StudentAccount stdAccount = (StudentAccount) account;
+                System.out.println("school: " + stdAccount.getSchoolName());
+            }
+
+            System.out.println("balance: " + account.getBalance());
+
+        }
+
+
+        printBalance(bankAccount);
+
+        DepositTransferService depositTransferService = new DepositTransferService();
+        depositTransferService.deposit(bankAccount, 400);
+        depositTransferService.deposit(bankAccount, 100);
+        depositTransferService.deposit(bankAccount, 200);
+        depositTransferService.deposit(bankAccount, 600);
+
+        printBalance(bankAccount);
+
+        WithdrawTransferService withdrawTransferService = new WithdrawTransferService();
+
+        withdrawTransferService.withdraw(bankAccount, 300);
+        withdrawTransferService.withdraw(bankAccount, 300);
+
+        withdrawTransferService.withdraw(bankAccount, 100);
+        withdrawTransferService.withdraw(bankAccount, 50);
+        withdrawTransferService.withdraw(bankAccount, 400);
+
+        printBalance(bankAccount);
+
     }
 
-    printBalance(bankAccount);
-
-    bankAccount.add(400);
-    bankAccount.add(100);
-    bankAccount.add(700);
-
-    printBalance(bankAccount);
-
-    bankAccount.sub(400);
-    bankAccount.sub(100);
-    bankAccount.sub(700);
-
-    printBalance(bankAccount);
-
-    printBalance(studentAccount);
-
-    studentAccount.sub(5000);
-
-    printBalance(studentAccount);
-
-    printBalance(businessAccount);
-
-    businessAccount.add((101));
-    businessAccount.sub(100);
-
-    printBalance(businessAccount);
-
+    private static void printBalance(BankAccount bankAccount) {
+        System.out.println("balance: " + bankAccount.getBalance());
+    }
 }
-
-private void printBalance(BankAccount bankAccount){
-    System.out.println("balance " + bankAccount.getBalance());
-}
-

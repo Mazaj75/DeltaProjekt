@@ -1,13 +1,17 @@
 package person;
 
+import java.util.UUID;
+
 public class AccountOwner {
 
     private String uuid;
+
     private String name;
+
     private String lastName;
 
-    public AccountOwner(String name, String lastName){
-        this.uuid = "...";
+    public AccountOwner(String name, String lastName) {
+        this.uuid = UUID.randomUUID().toString();
         this.name = name;
         this.lastName = lastName;
     }
@@ -22,5 +26,9 @@ public class AccountOwner {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public String getLastName() {
+        return lastName;
     }
 }

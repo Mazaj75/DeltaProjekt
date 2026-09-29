@@ -1,11 +1,17 @@
 package accounts;
+
+// 2010
+
+import notifier.ConsoleNotifierService;
+import notifier.EmailNotifierService;
+import notifier.NotifierService;
 import person.AccountOwner;
 
 import java.util.UUID;
 
+// 2102405518
 public abstract class BankAccount {
 
-    private String accountType;
     private String uuid;
 
     private AccountOwner accountOwner;
@@ -14,48 +20,26 @@ public abstract class BankAccount {
 
     private double balance;
 
-    public BankAccount(AccountOwner accountOwner, String accountNumber, double balance) {
-        this.uuid = UUID.randomUUID().toString();
-        this.accountOwner = accountOwner;
-        this.accountNumber = accountNumber;
-        balance = balance;
-    }
+    private NotifierService notifierService = new ConsoleNotifierService();
 
     public BankAccount(AccountOwner accountOwner, String accountNumber) {
         this.uuid = UUID.randomUUID().toString();
         this.accountOwner = accountOwner;
         this.accountNumber = accountNumber;
-        balance = 0;
+        this.balance = 0;
     }
 
-    public double getBalance(){
+    public BankAccount(AccountOwner accountOwner, String accountNumber, double balance) {
+        this(accountOwner, accountNumber);
+
+        this.balance = balance;
+    }
+
+    public double getBalance() {
         return balance;
     }
 
     public void setBalance(double balance) {
         this.balance = balance;
     }
-
-    public void changeBalance(double amount){
-        this.balance += amount;
-    }
-
-    public void add(double amount){
-        if (amount < 0){
-            throw new IllegalArgumentException("Amount cannot be negative");
-        }
-
-        this.balance += amount;
-    }
-
-    public void sub(double amount){
-        double newBalance = balance - amount;
-
-        if (newBalance < 0){
-            throw new IllegalArgumentException("Cannot subract negative amount");
-        }
-
-        this.balance -= amount;
-    }
-
 }

@@ -1,5 +1,7 @@
 import accounts.*;
+import history.TransferLoggerService;
 import person.AccountOwner;
+import person.AccountOwnerFactory;
 import transfer.AccountTransferService;
 import transfer.DepositTransferService;
 import transfer.WithdrawTransferService;
@@ -8,8 +10,10 @@ public class Main {
 
     public static void main(String[] args) {
 
-        AccountOwner owner1 = new AccountOwner("Jakub", "Mazal");
-        AccountOwner owner2 = new AccountOwner("Jan", "Novak");
+        AccountOwnerFactory accountOwnerFactory = new AccountOwnerFactory();
+
+        AccountOwner owner1 = accountOwnerFactory.createAccountOwner("Jakub", "Mazal");
+        AccountOwner owner2 = accountOwnerFactory.createAccountOwner("Jan", "Novak");
 
         BankAccount currentAccount = new CurrentAccount(owner1, "1001", 1000);
         BankAccount businessAccount = new BusinessAccount(owner1, "1002");
@@ -21,7 +25,11 @@ public class Main {
         printBalance("BusinessAccount", businessAccount);
         printBalance("StudentAccount", studentAccount);
 
-        AccountTransferService transferService = new AccountTransferService();
+        TransferLoggerService transferLoggerService = new TransferLoggerService();
+
+        AccountTransferService transferService = new AccountTransferService(transferLoggerService);
+        DepositTransferService depositService = new DepositTransferService(transferLoggerService);
+        WithdrawTransferService withdrawService = new WithdrawTransferService(transferLoggerService);
 
         System.out.println("\n--- 1. Převod 1000 Kč z BusinessAccount na CurrentAccount ---");
         // Poplatek 0.3 % z 1000 je 3 Kč -> z BusinessAccount odejde 1003 Kč
@@ -57,6 +65,16 @@ public class Main {
         } catch (IllegalArgumentException e) {
             System.out.println("Chyba zachycena: " + e.getMessage());
         }
+
+        System.out.println("\n--- 4. Vklad a výběr ---");
+        depositService.deposit(studentAccount, 1000);
+        withdrawService.withdraw(businessAccount, 500);
+
+        System.out.println("\n=== HISTORIE TRANSAKCÍ (všechny) ===");
+        transferLoggerService.getAllTransactions().forEach(System.out::println);
+
+        System.out.println("\n=== HISTORIE ÚČTU 2001 (StudentAccount) ===");
+        transferLoggerService.getTransactionsForAccount("2001").forEach(System.out::println);
     }
 
     private static void printBalance(String label, BankAccount bankAccount) {

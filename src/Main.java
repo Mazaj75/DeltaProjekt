@@ -1,10 +1,15 @@
 import accounts.*;
+import accounts.Serialization.BankAccountJacksonXmlSerializator;
+import accounts.Serialization.BankAccountJsonSerializator;
+import accounts.Serialization.BankAccountSerializer;
 import history.TransferLoggerService;
 import person.AccountOwner;
 import person.AccountOwnerFactory;
 import transfer.AccountTransferService;
 import transfer.DepositTransferService;
 import transfer.WithdrawTransferService;
+
+import java.util.List;
 
 public class Main {
 
@@ -75,6 +80,19 @@ public class Main {
 
         System.out.println("\n=== HISTORIE ÚČTU 2001 (StudentAccount) ===");
         transferLoggerService.getTransactionsForAccount("2001").forEach(System.out::println);
+
+        System.out.println("\n--- 5. Serializace účtů ---");
+        List<BankAccount> accounts = List.of(currentAccount, businessAccount, studentAccount);
+
+        BankAccountSerializer jsonSerializer = new BankAccountJsonSerializator();
+        BankAccountSerializer xmlSerializer = new BankAccountJacksonXmlSerializator();
+
+        System.out.println("JSON (Gson):");
+        System.out.println(jsonSerializer.serializeAll(accounts));
+
+        System.out.println("XML (Jackson):");
+        System.out.println(xmlSerializer.serializeAll(accounts));
+        System.out.println(xmlSerializer.serialize(currentAccount));
     }
 
     private static void printBalance(String label, BankAccount bankAccount) {

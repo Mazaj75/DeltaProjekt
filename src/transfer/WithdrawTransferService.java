@@ -17,6 +17,7 @@ public class WithdrawTransferService {
         this.transferLoggerService = transferLoggerService;
     }
 
+    /** Částka je v měně účtu. */
     public void withdraw(BankAccount account, double amount) {
         double newBalance = account.getBalance() - amount;
         double serviceFee = 0;
@@ -34,7 +35,8 @@ public class WithdrawTransferService {
         account.setBalance(newBalance);
 
         transferLoggerService.log(
-                transactionFactory.createWithdrawal(account.getAccountNumber(), amount, serviceFee)
+                transactionFactory.createWithdrawal(
+                        account.getAccountNumber(), account.getCurrency(), amount, serviceFee)
         );
     }
 

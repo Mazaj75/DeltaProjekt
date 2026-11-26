@@ -1,10 +1,9 @@
 package accounts;
 
+import currency.Currency;
 import notifier.ConsoleNotifierService;
 import notifier.NotifierService;
 import person.AccountOwner;
-
-import java.util.UUID;
 
 public abstract class BankAccount {
 
@@ -16,27 +15,20 @@ public abstract class BankAccount {
 
     private double balance;
 
+    private final Currency currency;
+
     private NotifierService notifierService = new ConsoleNotifierService();
 
-    public BankAccount(AccountOwner accountOwner, String accountNumber) {
-        this.uuid = UUID.randomUUID().toString();
+    public BankAccount(AccountOwner accountOwner, Currency currency) {
         this.accountOwner = accountOwner;
-        this.accountNumber = accountNumber;
+        this.currency = currency;
         this.balance = 0;
     }
 
-    public BankAccount(AccountOwner accountOwner, String accountNumber, double balance) {
-        this(accountOwner, accountNumber);
+    public BankAccount(AccountOwner accountOwner, double balance, Currency currency) {
+        this(accountOwner, currency);
 
         this.balance = balance;
-    }
-
-    public String getUuid() {
-        return uuid;
-    }
-
-    public String getAccountNumber() {
-        return accountNumber;
     }
 
     public double getBalance() {
@@ -45,5 +37,21 @@ public abstract class BankAccount {
 
     public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    public Currency getCurrency() {
+        return currency;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
     }
 }

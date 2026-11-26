@@ -2,7 +2,8 @@ package cards;
 
 public class CreditCardFactory {
 
-    public CreditCard createCreditCard() {
+    public CreditCard creatrCreditCard() {
         return new CreditCard();
     }
+
 }

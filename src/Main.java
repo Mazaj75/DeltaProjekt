@@ -1,101 +1,96 @@
-import accounts.*;
-import accounts.Serialization.BankAccountJacksonXmlSerializator;
-import accounts.Serialization.BankAccountJsonSerializator;
-import accounts.Serialization.BankAccountSerializer;
+import accounts.BankAccount;
+import accounts.SavingAccount;
+import accounts.serialization.BankAccountGsonSerializer;
+import accounts.serialization.BankAccountJsonSerializer;
+import accounts.serialization.BankAccountXmlSerializer;
+import accounts.services.IBankAccountService;
+import di.Container;
+import di.ContainerFactory;
 import history.TransferLoggerService;
 import person.AccountOwner;
-import person.AccountOwnerFactory;
+import person.services.AccountOwnerService;
 import transfer.AccountTransferService;
 import transfer.DepositTransferService;
 import transfer.WithdrawTransferService;
-
-import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        AccountOwnerFactory accountOwnerFactory = new AccountOwnerFactory();
+        // Celý objektový graf se poskládá na jednom místě
+        Container container = new ContainerFactory().createContainerWithLogger();
 
-        AccountOwner owner1 = accountOwnerFactory.createAccountOwner("Jakub", "Mazal");
-        AccountOwner owner2 = accountOwnerFactory.createAccountOwner("Jan", "Novak");
+        AccountOwnerService ownerService = container.get(AccountOwnerService.class);
+        IBankAccountService accountService = container.get(IBankAccountService.class);
+        DepositTransferService depositService = container.get(DepositTransferService.class);
+        WithdrawTransferService withdrawService = container.get(WithdrawTransferService.class);
+        AccountTransferService transferService = container.get(AccountTransferService.class);
+        TransferLoggerService historyService = container.get(TransferLoggerService.class);
 
-        BankAccount currentAccount = new CurrentAccount(owner1, "1001", 1000);
-        BankAccount businessAccount = new BusinessAccount(owner1, "1002");
-        businessAccount.setBalance(10000);
-        BankAccount studentAccount = new StudentAccount(owner2, "2001", 500, "Delta");
+        // ---------------------------------------------------
+        // 1. Majitelé a účty
+        // ---------------------------------------------------
+        System.out.println("=== VYTVOŘENÍ ÚČTŮ ===");
 
-        System.out.println("=== POČÁTEČNÍ ZŮSTATKY ===");
-        printBalance("CurrentAccount", currentAccount);
-        printBalance("BusinessAccount", businessAccount);
-        printBalance("StudentAccount", studentAccount);
+        AccountOwner jakub = ownerService.createAccountOwner("Jakub", "Mazal");
+        AccountOwner jan = ownerService.createAccountOwner("Jan", "Novak");
 
-        TransferLoggerService transferLoggerService = new TransferLoggerService();
+        BankAccount current = accountService.createCurrentBankAccount(jakub, 1000);
+        BankAccount business = accountService.createBusinessBankAccount(jakub, 10000);
+        BankAccount saving = accountService.createSavingBankAccount(jan, 1000);
+        BankAccount student = accountService.createStudentBankAccount(jan, 500, "Delta");
 
-        AccountTransferService transferService = new AccountTransferService(transferLoggerService);
-        DepositTransferService depositService = new DepositTransferService(transferLoggerService);
-        WithdrawTransferService withdrawService = new WithdrawTransferService(transferLoggerService);
+        printAccounts(accountService);
 
-        System.out.println("\n--- 1. Převod 1000 Kč z BusinessAccount na CurrentAccount ---");
-        // Poplatek 0.3 % z 1000 je 3 Kč -> z BusinessAccount odejde 1003 Kč
-        transferService.transfer(businessAccount, currentAccount, 1000);
-        printBalance("BusinessAccount (po odečtení 1000 + 3 Kč poplatek)", businessAccount);
-        printBalance("CurrentAccount (po přijetí 1000 Kč)", currentAccount);
+        // ---------------------------------------------------
+        // 2. Vklady, výběry, převody
+        // ---------------------------------------------------
+        System.out.println("\n=== TRANSAKCE ===");
 
-        System.out.println("\n--- 2. Převod 500 Kč z CurrentAccount na StudentAccount ---");
-        // StudentAccount dostane navíc bonus 0.5 % z 500 (2.5 Kč)
-        transferService.transfer(currentAccount, studentAccount, 500);
-        printBalance("CurrentAccount", currentAccount);
-        printBalance("StudentAccount (přijato 500 + 2.5 bonus)", studentAccount);
+        depositService.deposit(current, 500);
+        depositService.deposit(student, 1000);          // studentský bonus 0,5 %
+        withdrawService.withdraw(business, 1000);       // poplatek 1 %
+        transferService.transfer(business, student, 2000); // poplatek 0,3 % + studentský bonus 0,5 %
 
-        System.out.println("\n--- 3. Test ošetření chyb / výjimek ---");
+        printAccounts(accountService);
 
-        try {
-            System.out.println("Pokus o převod záporné částky:");
-            transferService.transfer(currentAccount, studentAccount, -200);
-        } catch (IllegalArgumentException e) {
-            System.out.println("Chyba zachycena: " + e.getMessage());
-        }
+        // ---------------------------------------------------
+        // 3. Úrok na spořicím účtu
+        // ---------------------------------------------------
+        System.out.println("\n=== ÚROK ===");
 
-        try {
-            System.out.println("Pokus o převod na stejný účet:");
-            transferService.transfer(currentAccount, currentAccount, 100);
-        } catch (IllegalArgumentException e) {
-            System.out.println("Chyba zachycena: " + e.getMessage());
-        }
+        ((SavingAccount) saving).calculateInterest();
+        System.out.println("Spořicí účet " + saving.getAccountNumber()
+                + " po připsání úroku 5 %: " + saving.getBalance());
 
-        try {
-            System.out.println("Pokus o převod více peněz, než je zůstatek:");
-            transferService.transfer(currentAccount, businessAccount, 50000);
-        } catch (IllegalArgumentException e) {
-            System.out.println("Chyba zachycena: " + e.getMessage());
-        }
+        // ---------------------------------------------------
+        // 4. Historie transakcí
+        // ---------------------------------------------------
+        System.out.println("\n=== HISTORIE VŠECH TRANSAKCÍ ===");
+        historyService.getAllTransactions().forEach(System.out::println);
 
-        System.out.println("\n--- 4. Vklad a výběr ---");
-        depositService.deposit(studentAccount, 1000);
-        withdrawService.withdraw(businessAccount, 500);
+        System.out.println("\n=== HISTORIE STUDENTSKÉHO ÚČTU " + student.getAccountNumber() + " ===");
+        historyService.getTransactionsForAccount(student.getAccountNumber()).forEach(System.out::println);
 
-        System.out.println("\n=== HISTORIE TRANSAKCÍ (všechny) ===");
-        transferLoggerService.getAllTransactions().forEach(System.out::println);
+        // ---------------------------------------------------
+        // 5. Serializace
+        // ---------------------------------------------------
+        System.out.println("\n=== SERIALIZACE ===");
 
-        System.out.println("\n=== HISTORIE ÚČTU 2001 (StudentAccount) ===");
-        transferLoggerService.getTransactionsForAccount("2001").forEach(System.out::println);
-
-        System.out.println("\n--- 5. Serializace účtů ---");
-        List<BankAccount> accounts = List.of(currentAccount, businessAccount, studentAccount);
-
-        BankAccountSerializer jsonSerializer = new BankAccountJsonSerializator();
-        BankAccountSerializer xmlSerializer = new BankAccountJacksonXmlSerializator();
-
-        System.out.println("JSON (Gson):");
-        System.out.println(jsonSerializer.serializeAll(accounts));
-
-        System.out.println("XML (Jackson):");
-        System.out.println(xmlSerializer.serializeAll(accounts));
-        System.out.println(xmlSerializer.serialize(currentAccount));
+        System.out.println("JSON: " + container.get(BankAccountJsonSerializer.class)
+                .serializeAll(accountService.getBankAccounts()));
+        System.out.println("XML:  " + container.get(BankAccountXmlSerializer.class)
+                .serializeAll(accountService.getBankAccounts()));
+        System.out.println("GSON: " + container.get(BankAccountGsonSerializer.class)
+                .serializeAll(accountService.getBankAccounts()));
     }
 
-    private static void printBalance(String label, BankAccount bankAccount) {
-        System.out.println(label + " balance: " + bankAccount.getBalance());
+    private static void printAccounts(IBankAccountService service) {
+        System.out.println("Počet uložených účtů: " + service.getBankAccounts().size());
+
+        for (BankAccount account : service.getBankAccounts()) {
+            System.out.println(account.getClass().getSimpleName() + " " + account.getAccountNumber()
+                    + " balance: " + account.getBalance());
+        }
     }
 }

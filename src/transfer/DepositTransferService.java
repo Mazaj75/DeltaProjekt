@@ -16,6 +16,7 @@ public class DepositTransferService {
         this.transferLoggerService = transferLoggerService;
     }
 
+    /** Částka je v měně účtu. */
     public void deposit(BankAccount bankAccount, double amount) {
         double newBalance = bankAccount.getBalance() + amount;
         double depositBonus = 0;
@@ -29,7 +30,8 @@ public class DepositTransferService {
         bankAccount.setBalance(newBalance);
 
         transferLoggerService.log(
-                transactionFactory.createDeposit(bankAccount.getAccountNumber(), amount, depositBonus)
+                transactionFactory.createDeposit(
+                        bankAccount.getAccountNumber(), bankAccount.getCurrency(), amount, depositBonus)
         );
     }
 

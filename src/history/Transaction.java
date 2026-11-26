@@ -1,5 +1,7 @@
 package history;
 
+import currency.Currency;
+
 import java.time.LocalDateTime;
 
 public class Transaction {
@@ -9,15 +11,21 @@ public class Transaction {
     private final LocalDateTime timestamp;
     private final String sourceAccountNumber;
     private final String targetAccountNumber;
+    private final Currency currency;
     private final double amount;
     private final double fee;
     private final double bonus;
 
+    /**
+     * amount, fee a bonus jsou vždy v měně "currency"
+     * (u převodu v měně zdrojového účtu).
+     */
     public Transaction(String id,
                        TransactionType type,
                        LocalDateTime timestamp,
                        String sourceAccountNumber,
                        String targetAccountNumber,
+                       Currency currency,
                        double amount,
                        double fee,
                        double bonus) {
@@ -26,6 +34,7 @@ public class Transaction {
         this.timestamp = timestamp;
         this.sourceAccountNumber = sourceAccountNumber;
         this.targetAccountNumber = targetAccountNumber;
+        this.currency = currency;
         this.amount = amount;
         this.fee = fee;
         this.bonus = bonus;
@@ -41,6 +50,8 @@ public class Transaction {
 
     public String getTargetAccountNumber() { return targetAccountNumber; }
 
+    public Currency getCurrency() { return currency; }
+
     public double getAmount() { return amount; }
 
     public double getFee() { return fee; }
@@ -52,9 +63,9 @@ public class Transaction {
         return timestamp + " | " + type
                 + " | z: " + (sourceAccountNumber == null ? "-" : sourceAccountNumber)
                 + " | na: " + (targetAccountNumber == null ? "-" : targetAccountNumber)
-                + " | částka: " + amount
-                + " | poplatek: " + fee
-                + " | bonus: " + bonus
+                + " | částka: " + amount + " " + currency
+                + " | poplatek: " + fee + " " + currency
+                + " | bonus: " + bonus + " " + currency
                 + " | id: " + id;
     }
 }

@@ -3,6 +3,7 @@ package transfer;
 import accounts.BankAccount;
 import accounts.BusinessAccount;
 import accounts.StudentAccount;
+import currency.CurrencyConverterService;
 import history.TransactionFactory;
 import history.TransferLoggerService;
 
@@ -12,12 +13,19 @@ public class AccountTransferService {
     private static final double STUDENT_ACCOUNT_TRANSFER_BONUS = 0.005;
 
     private final TransferLoggerService transferLoggerService;
+    private final CurrencyConverterService currencyConverterService;
     private final TransactionFactory transactionFactory = new TransactionFactory();
 
-    public AccountTransferService(TransferLoggerService transferLoggerService) {
+    public AccountTransferService(TransferLoggerService transferLoggerService,
+                                  CurrencyConverterService currencyConverterService) {
         this.transferLoggerService = transferLoggerService;
+        this.currencyConverterService = currencyConverterService;
     }
 
+    /**
+     * Částka je v měně zdrojového účtu. Poplatek i bonus se počítají ve zdrojové měně,
+     * na cílový účet se výsledná částka přepočte na jeho měnu.
+     */
     public void transfer(BankAccount from, BankAccount to, double amount) {
         if (from == null || to == null) {
             throw new IllegalArgumentException("Zdrojový i cílový účet musí být zadány.");
@@ -50,11 +58,14 @@ public class AccountTransferService {
         if (to instanceof StudentAccount) {
             bonus = amount * STUDENT_ACCOUNT_TRANSFER_BONUS;
         }
-        to.setBalance(to.getBalance() + amount + bonus);
+
+        double credited = currencyConverterService.convert(
+                amount + bonus, from.getCurrency(), to.getCurrency());
+        to.setBalance(to.getBalance() + credited);
 
         transferLoggerService.log(
                 transactionFactory.createTransfer(
-                        from.getAccountNumber(), to.getAccountNumber(), amount, fee, bonus)
+                        from.getAccountNumber(), to.getAccountNumber(), from.getCurrency(), amount, fee, bonus)
         );
     }
 
